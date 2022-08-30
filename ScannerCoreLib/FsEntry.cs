@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ScannerCoreLib
 {
-    internal class FsEntry
+    public class FsEntry
     {
         public FsEntry(string name, long size, bool isDir, DateTime lastModified = default)
         {
@@ -15,8 +15,12 @@ namespace ScannerCoreLib
             IsDir = isDir;
             LastModified = lastModified == default ? DateTime.Now : lastModified;
         }
+        public FsEntry()
+        {
+            
+        }
 
-        public List<FsEntry> _children;
+        public List<FsEntry> _children = new List<FsEntry>();
 
         public string Name { get; set; }
         public long Size { get; set; }

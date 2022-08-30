@@ -49,5 +49,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ScannerCoreLib\ScannerCoreLib.csproj">
+      <Project>{d03793b7-2e78-4056-b0d0-6d25d5fd3d02}</Project>
+      <Name>ScannerCoreLib</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
