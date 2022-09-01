@@ -10,44 +10,58 @@ using System.Threading.Tasks;
 
 namespace ScannerCoreLib
 {
-    public class Scanner //TODO: Class lacks incapsulation
+    public class Scanner
     {
-        private readonly List<string> _failed; //TODO:  Fix
-        public long Total { get; set; } //TODO: Need use
-        public long Occupied { get; set; } //TODO: Need use
-
-        public List<string> Failed
+        public List<string> Failed { get; }
+        public string TotalDriveInfo
         {
-            get { return _failed; }
+            get
+            {
+                if(Root != null)
+                {
+                    decimal round(long l) { return Math.Round(Convert.ToDecimal(l), 3); }
+                    var currentDrive = Drives.Single(d => d.Name[0].Equals(Root[0]));
+                    var sb = new StringBuilder();
+                    sb.AppendFormat("Current drive: {0} | Total size: {1} | Free space: {2} | Occupied: {3}",
+                        currentDrive.Name,
+                        round(currentDrive.TotalSize), 
+                        round(currentDrive.TotalFreeSpace), 
+                        round(currentDrive.TotalSize - currentDrive.TotalFreeSpace));
+                    return sb.ToString();
+                }
+                return null;
+            }
         }
-        public string CurrentEntry { get; set; } //TODO: Need use
+        public DriveInfo[] Drives => System.Environment.GetLogicalDrives().Select(s => new DriveInfo(s)).ToArray();
+        public Stopwatch Watch { get; private set; }
+        public string Root { get; private set; }
+        public FsEntry FlattenResult { get; private set; }
+        //TODO: Implement Tree view?
 
-        private FsEntry _result;
-        public FsEntry Result { get { return _result; } }
 
-        public Scanner()
+        public Scanner(string root)
         {
-            _failed = new List<string>();
-            _result = new FsEntry();
+            Root = root;
+            FlattenResult = new FsEntry(root);
+            Failed = new List<string>();
         }
-
-        public async Task ScanAsync(string root)
+        public async Task<FsEntry> ScanAsync()
         {
+            Watch = Stopwatch.StartNew();
             try
             {
-                _result = CreateEntry(root).Result;
-                await TraverseEntry(root, async f =>
+                await Traverse(Root,
+                    async (entry) =>
                 {
                     try
                     {
-                        var entry = CreateEntry(f).Result;
-                        _result._children.Add(entry);
+                        FlattenResult.AddChild(entry);
                     }
-                    catch (FileNotFoundException) { }
-                    catch (IOException) { }
-                    catch (UnauthorizedAccessException) { }
-                    catch (SecurityException) { }
-                    await LogAsync(f);
+                    catch (FileNotFoundException e) { await LogAsync(e.Message); }
+                    catch (IOException e) { await LogAsync(e.Message); }
+                    catch (UnauthorizedAccessException e) { await LogAsync(e.Message); }
+                    catch (SecurityException e) { await LogAsync(e.Message); }
+                    catch (IndexOutOfRangeException e) { await LogAsync($"Message: {e.Message} -> StackTrace: {e.StackTrace}"); throw; }
                 });
             }
             catch (ArgumentException e)
@@ -55,40 +69,22 @@ namespace ScannerCoreLib
                 await LogAsync(e.Message);
                 throw;
             }
+            Watch.Stop();
+            return FlattenResult;
         }
 
-        private async Task<FsEntry> CreateEntry(string root)
+
+        private async Task Traverse(string root, Action<string> action) //TODO: Too lagre method, refactor ??
         {
-            FileSystemInfo fsi;
-            if (Directory.Exists(root)) { fsi = new DirectoryInfo(root); }
-            else { fsi = new FileInfo(root); }
-
-            return new FsEntry()
-            {
-                Name = fsi.FullName,
-                IsDir = fsi is DirectoryInfo,
-                Size = fsi is DirectoryInfo ? await CalculateDirSizeAsync(fsi as DirectoryInfo) : CalculateFileSize(fsi as FileInfo),
-                LastModified = fsi.LastWriteTime
-            };
-        }
-
-        private long CalculateFileSize(FileInfo fileInfo)
-        {
-            return fileInfo.Length;
-        }
-
-        public  async Task TraverseEntry(string root, Action<string> action) //TODO: Too lagre method, refactor ??
-        {
-            int entryCount = 0;
-            var sw = Stopwatch.StartNew();
-
-            int procCount = Environment.ProcessorCount;
-
-            var dirs = new Stack<string>();
             if (!Directory.Exists(root))
             {
                 throw new ArgumentException("Root directory doesn't exists", nameof(root));
             }
+
+            int entryCount = 0;
+            int procCount = Environment.ProcessorCount;
+
+            var dirs = new Stack<string>();
             dirs.Push(root);
             while (dirs.Count > 0)
             {
@@ -100,37 +96,15 @@ namespace ScannerCoreLib
                 {
                     subDirs = Directory.GetDirectories(currentDir);
                 }
-                catch (UnauthorizedAccessException e)
-                {
-                    await LogAsync(e.Message);
-                    continue;
-                }
-                // Thrown if another process has deleted the directory after retrieved its name.
-                catch (DirectoryNotFoundException e)
-                {
-                    await LogAsync(e.Message);
-                    continue;
-                }
+                catch (UnauthorizedAccessException e) { await LogAsync(e.Message); continue; }
+                catch (DirectoryNotFoundException e) { await LogAsync(e.Message); continue; }
                 try
                 {
                     files = Directory.GetFiles(currentDir);
                 }
-                catch (UnauthorizedAccessException e)
-                {
-                    await LogAsync(e.Message);
-                    continue;
-                }
-                catch (DirectoryNotFoundException e)
-                {
-                    await LogAsync(e.Message);
-                    continue;
-                }
-                catch (IOException e)
-                {
-                    await LogAsync(e.Message);
-                    continue;
-                }
-                string[] entries = files.Union(subDirs).ToArray();
+                catch (UnauthorizedAccessException e) { await LogAsync(e.Message); continue; }
+                catch (FileNotFoundException e) { await LogAsync(e.Message); continue; }
+                string[] entries = subDirs.Union(files).ToArray();
                 try
                 {
                     if (entries.Length < procCount)
@@ -153,48 +127,20 @@ namespace ScannerCoreLib
                                          });
                     }
                 }
-                catch (AggregateException ae)
+                catch (AggregateException ae) { await LogAsync(ae.Message); }
+                
+
+                foreach (var str in subDirs)
                 {
-                    await LogAsync(ae.Message);
-                }
-                foreach(var str in subDirs)
                     dirs.Push(str);
-            }
-        }
-
-        private async Task<long> CalculateDirSizeAsync(DirectoryInfo info)
-        {
-            return await Task.Run(() => CalculateDirSize(info));
-        }
-
-        public  long CalculateDirSize(DirectoryInfo info)
-        {
-            long size = 0;
-            string[] fileEntries = Directory.GetFiles(info.FullName);
-            foreach(string entry in fileEntries)
-            {
-                Interlocked.Add(ref size, (new FileInfo(entry)).Length);
-            }
-            string[] subdirEntries = Directory.GetDirectories(info.FullName);
-            Parallel.For<long>(0, subdirEntries.Length, () => 0, (i, loop, subtotal) =>
-            {
-                if ((File.GetAttributes(subdirEntries[i]) & FileAttributes.ReparsePoint) != FileAttributes.ReparsePoint)
-                {
-                    subtotal += CalculateDirSize(new DirectoryInfo(subdirEntries[i]));
-                    return subtotal;
                 }
-                return 0;
-            },
-                (x) => Interlocked.Add(ref size, x)
-            );
-            return size;
+            }
         }
-
         private async Task LogAsync(string f)
         {
             await Task.Run(() =>
             {
-                _failed.Add(f);
+                Failed.Add(f);
                 Console.WriteLine(f);
             });
         }
