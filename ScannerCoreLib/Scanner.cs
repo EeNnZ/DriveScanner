@@ -1,10 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,69 +12,61 @@ namespace ScannerCoreLib
 {
     public class Scanner
     {
-        public List<string> Failed { get; }
-        public string TotalDriveInfo
+        private ReportHelper _reportHelper;
+        public IOptions Options { get; private set; }
+        public string FileName { get => $"scan_{DateTime.Now:MMM_dd_HH_mm}.txt"; }
+        public StringCollection Failed { get; }
+        public long DriveFreeSpace => _currentDrive.TotalFreeSpace;
+        public long DriveTotalSpace => _currentDrive.TotalSize;
+        public long DriveOccupiedSpace => DriveTotalSpace - DriveFreeSpace;
+        private DriveInfo _currentDrive;
+        readonly IProgress<long> _progress; //TODO: Need progress or not?
+
+        public DriveInfo CurrentDrive
         {
-            get
-            {
-                if(Root != null)
-                {
-                    decimal round(long l) { return Math.Round(Convert.ToDecimal(l), 3); }
-                    var currentDrive = Drives.Single(d => d.Name[0].Equals(Root[0]));
-                    var sb = new StringBuilder();
-                    sb.AppendFormat("Current drive: {0} | Total size: {1} | Free space: {2} | Occupied: {3}",
-                        currentDrive.Name,
-                        round(currentDrive.TotalSize), 
-                        round(currentDrive.TotalFreeSpace), 
-                        round(currentDrive.TotalSize - currentDrive.TotalFreeSpace));
-                    return sb.ToString();
-                }
-                return null;
-            }
+            get { return _currentDrive; }
         }
-        public DriveInfo[] Drives => System.Environment.GetLogicalDrives().Select(s => new DriveInfo(s)).ToArray();
         public Stopwatch Watch { get; private set; }
         public string Root { get; private set; }
-        public FsEntry FlattenResult { get; private set; }
+        public ConcurrentBag<FsItem> FlattenResult { get; private set; }
         //TODO: Implement Tree view?
 
 
-        public Scanner(string root)
+        public Scanner(IOptions options, Action<long> handler)
         {
-            Root = root;
-            FlattenResult = new FsEntry(root);
-            Failed = new List<string>();
+            Options = options;
+            Root = Options.Root;
+            SetCurrentDrive();
+            _progress = new Progress<long>(handler);
+            FlattenResult = new ConcurrentBag<FsItem>();
+            Failed = new StringCollection();
         }
-        public async Task<FsEntry> ScanAsync()
+        public async Task<ConcurrentBag<FsItem>> ScanAsync()
         {
             Watch = Stopwatch.StartNew();
             try
             {
-                await Traverse(Root,
-                    async (entry) =>
+                await Task.Run(() =>
                 {
-                    try
-                    {
-                        FlattenResult.AddChild(entry);
-                    }
-                    catch (FileNotFoundException e) { await LogAsync(e.Message); }
-                    catch (IOException e) { await LogAsync(e.Message); }
-                    catch (UnauthorizedAccessException e) { await LogAsync(e.Message); }
-                    catch (SecurityException e) { await LogAsync(e.Message); }
-                    catch (IndexOutOfRangeException e) { await LogAsync($"Message: {e.Message} -> StackTrace: {e.StackTrace}"); throw; }
+                    Traverse(Root, (entry) =>
+                        {
+                            try
+                            {
+                                //Action with every reached entry
+                                var item = new FsItem(entry);
+                                FlattenResult.Add(item);
+                            }
+                        catch (IndexOutOfRangeException e)
+                        { Log($"Message: {e.Message} -> StackTrace: {e.StackTrace}"); throw; }
+                        catch (Exception e) { Log(e.Message); }
+                        }, _progress);
                 });
             }
-            catch (ArgumentException e)
-            {
-                await LogAsync(e.Message);
-                throw;
-            }
+            catch (ArgumentException e) { Log(e.Message); throw; }
             Watch.Stop();
             return FlattenResult;
         }
-
-
-        private async Task Traverse(string root, Action<string> action) //TODO: Too lagre method, refactor ??
+        private void Traverse(string root, Action<string> action, IProgress<long> progress)
         {
             if (!Directory.Exists(root))
             {
@@ -96,14 +88,14 @@ namespace ScannerCoreLib
                 {
                     subDirs = Directory.GetDirectories(currentDir);
                 }
-                catch (UnauthorizedAccessException e) { await LogAsync(e.Message); continue; }
-                catch (DirectoryNotFoundException e) { await LogAsync(e.Message); continue; }
+                catch (UnauthorizedAccessException e) { Log(e.Message); continue; }
+                catch (DirectoryNotFoundException e) { Log(e.Message); continue; }
                 try
                 {
                     files = Directory.GetFiles(currentDir);
                 }
-                catch (UnauthorizedAccessException e) { await LogAsync(e.Message); continue; }
-                catch (FileNotFoundException e) { await LogAsync(e.Message); continue; }
+                catch (UnauthorizedAccessException e) { Log(e.Message); continue; }
+                catch (FileNotFoundException e) { Log(e.Message); continue; }
                 string[] entries = subDirs.Union(files).ToArray();
                 try
                 {
@@ -122,13 +114,14 @@ namespace ScannerCoreLib
                             action(entry);
                             return (int)++localCount;
                         },
-                                         (c) => {
+                                         (c) =>
+                                         {
                                              Interlocked.Add(ref entryCount, c);
                                          });
                     }
                 }
-                catch (AggregateException ae) { await LogAsync(ae.Message); }
-                
+                catch (AggregateException ae) { Log(ae.Message); }
+
 
                 foreach (var str in subDirs)
                 {
@@ -136,13 +129,28 @@ namespace ScannerCoreLib
                 }
             }
         }
-        private async Task LogAsync(string f)
+        private void SetCurrentDrive()
         {
-            await Task.Run(() =>
+            var drives = System.Environment.GetLogicalDrives();
+            var current = drives.Single(d => d[0].Equals(Root[0]));
+            _currentDrive = new DriveInfo(current);
+        }
+        public async Task Report()
+        {
+            _reportHelper = new ReportHelper(this);
+            string res = _reportHelper.BuildReport();
+            string dest = Options.Path + FileName;
+            await Task.Run(
+                () =>
             {
-                Failed.Add(f);
-                Console.WriteLine(f);
-            });
+                foreach (var item in Failed)
+                    Console.WriteLine(item);
+            }).ContinueWith(t => File.WriteAllText(dest, res))
+                .ContinueWith(t => Process.Start("notepad.exe", dest));
+        }
+        private void Log(string f)
+        {
+            Failed.Add(f);
         }
     }
 }

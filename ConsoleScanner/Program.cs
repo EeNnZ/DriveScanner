@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
-
+using CommandLine;
+using ShellProgressBar;
 using ScannerCoreLib;
+using System.Threading;
 
 namespace ConsoleScanner
 {
@@ -15,50 +11,26 @@ namespace ConsoleScanner
     {
         static async Task Main(string[] args)
         {
-            string requested = string.Empty;
-            string target = string.Empty;
-#if DEBUG
-            requested = "D:\\";
-            target = "D:\\Desktop\\scan_results.txt";
-#else
+            var parser = new Parser(x =>
+            {
+                x.AutoHelp = true;
+                x.AutoVersion = false;
+                x.EnableDashDash = true;
+                x.IgnoreUnknownArguments = true;
+            });
+            var options = parser.ParseArguments<Options>(args).Value;
 
-            if (args.Length > 0)
+            var scanner = new Scanner(options, p =>
             {
-                requested = $"{args[0]}\\";
-                target = $"{args[1]}\\scan_results_{DateTime.Now:MMMM_dd_HH:MM:ss}.txt";
-            }
-            else
-            {
-                PrintUsage();
-                Environment.Exit(0);
-            }
-#endif
-            var scanner = new Scanner(requested);
-            Console.WriteLine("Scanning...");
+                //TODO: Handle progress here
+            });
+            Console.WriteLine("Processing...");
             await scanner.ScanAsync();
-            var helper = new ReportHelper(scanner);
-            string report = helper.BuildReport();
-            File.WriteAllText(target, report);
+            await scanner.Report();
 
-            Console.WriteLine("Opening results...");
-            //Process.Start("d:\\Utilities\\Notepad++\\notepad++.exe", target);
-            Process.Start("notepad.exe", target);
-
-            Console.WriteLine("Exit...");
-            //Console.ReadLine();
+            Console.WriteLine($"\r\nDone in {scanner.Watch.ElapsedMilliseconds} ms\r\nExit in 5 seconds...");
+            Thread.Sleep(5000);
         }
 
-        private static void PrintUsage()
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("---------------------USAGE---------------------");
-            sb.AppendLine("| 1st argument -> directory or drive to scan   |");
-            sb.AppendLine("| 2nd argument -> report file destination      |");
-            sb.AppendLine("| Example: ConsoleScanner.exe D: D:\\Desktop    |");
-            sb.AppendLine("-----------------------------------------------");
-            Console.Write(sb.ToString());
-        }
-
-        
     }
 }

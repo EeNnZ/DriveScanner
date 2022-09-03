@@ -1,17 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Collections.Concurrent;
 
 namespace ScannerCoreLib
 {
-    public class FsEntry
+    public class FsItem
     {
-        public FsEntry(string root)
+        public FsItem(string root)
         {
             Name = root;
             IsDir = Directory.Exists(root);
@@ -20,11 +17,9 @@ namespace ScannerCoreLib
             LastModified = Directory.GetLastWriteTime(root);
         }
 
-        public List<FsEntry> _children = new List<FsEntry>();
-        public List<FsEntry> Children => _children;
-
         public string Name { get; set; }
         private long byteSize;
+        public long ByteSize => byteSize;
         public decimal Size { 
             get 
             {
@@ -37,11 +32,6 @@ namespace ScannerCoreLib
         public bool IsDir { get; set; }
         public DateTime LastModified { get; set; }
 
-        public void AddChild(string root)
-        {
-            FsEntry newEntry = new FsEntry(root);
-            _children.Add(newEntry);
-        }
         private long CalculateFileSize(string root)
         {
             var fileInfo = new FileInfo(root);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -18,16 +19,24 @@ namespace ScannerCoreLib
         {
             if(Scanner == null)
                 return null;
-            var grouping = Scanner.FlattenResult.Children
+            var grouping = Scanner.FlattenResult
                 .Where(x => x != null)
                 .OrderByDescending(x => x.Size)
                 .Take(300)
                 .GroupBy(x => x.Name.Split('\\')[1]);
-            var seconds = Convert.ToString(Scanner.Watch.ElapsedMilliseconds / 1000);
+
+            decimal round(long l) { return Math.Round(Convert.ToDecimal(l), 3); }
+
             var sb = new StringBuilder();
+            sb.AppendFormat("Current drive: {0} | Total size: {1} | Free space: {2} | Occupied: {3}\r\n",
+                Scanner.CurrentDrive.Name,
+                round(Scanner.DriveTotalSpace),
+                round(Scanner.DriveFreeSpace),
+                round(Scanner.DriveOccupiedSpace));
+            var seconds = Convert.ToString(Scanner.Watch.ElapsedMilliseconds / 1000);
             foreach (var g in grouping)
             {
-                sb.AppendLine($"Key: {g.Key}-------");
+                sb.AppendLine($"Key: ---- {g.Key} ----");
                 sb.AppendLine("--------------------------------------------------------");
                 foreach (var item in g)
                 {
