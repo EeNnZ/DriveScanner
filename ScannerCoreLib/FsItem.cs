@@ -8,29 +8,28 @@ namespace ScannerCoreLib
 {
     public class FsItem
     {
+        public string Name { get; set; }
+        public bool IsDir { get; set; }
+        public DateTime LastModified { get; set; }
+        private long _byteSize;
+        public long ByteSize => _byteSize;
+        public decimal Size
+        {
+            get
+            {
+                var dec = Convert.ToDecimal(_byteSize);
+                var mb = Math.Round((dec / 1000000), 2);
+                return mb;
+            }
+        }
         public FsItem(string root)
         {
             Name = root;
             IsDir = Directory.Exists(root);
-            if (IsDir) { byteSize = CalculateDirectorySize(root); }
-            else { byteSize = CalculateFileSize(root); }
+            if (IsDir) { _byteSize = CalculateDirectorySize(root); }
+            else { _byteSize = CalculateFileSize(root); }
             LastModified = Directory.GetLastWriteTime(root);
         }
-
-        public string Name { get; set; }
-        private long byteSize;
-        public long ByteSize => byteSize;
-        public decimal Size { 
-            get 
-            {
-                var dec = Convert.ToDecimal(byteSize);
-                var mb = Math.Round((dec / 1000000), 2);
-                return mb;
-            } 
-        }
-
-        public bool IsDir { get; set; }
-        public DateTime LastModified { get; set; }
 
         private long CalculateFileSize(string root)
         {

@@ -12,14 +12,14 @@ namespace ScannerCoreLib
     {
         public ReportHelper(Scanner scanner)
         {
-            Scanner = scanner;
+            _scanner = scanner;
         }
-        private readonly Scanner Scanner;
+        private readonly Scanner _scanner;
         public string BuildReport()
         {
-            if(Scanner == null)
+            if(_scanner == null)
                 return null;
-            var grouping = Scanner.FlattenResult
+            var grouping = _scanner.FlattenResult
                 .Where(x => x != null)
                 .OrderByDescending(x => x.Size)
                 .Take(300)
@@ -29,11 +29,11 @@ namespace ScannerCoreLib
 
             var sb = new StringBuilder();
             sb.AppendFormat("Current drive: {0} | Total size: {1} | Free space: {2} | Occupied: {3}\r\n",
-                Scanner.CurrentDrive.Name,
-                round(Scanner.DriveTotalSpace),
-                round(Scanner.DriveFreeSpace),
-                round(Scanner.DriveOccupiedSpace));
-            var seconds = Convert.ToString(Scanner.Watch.ElapsedMilliseconds / 1000);
+                _scanner.CurrentDrive.Name,
+                round(_scanner.DriveTotalSpace),
+                round(_scanner.DriveFreeSpace),
+                round(_scanner.DriveOccupiedSpace));
+            var seconds = Convert.ToString(_scanner.Watch.ElapsedMilliseconds / 1000);
             foreach (var g in grouping)
             {
                 sb.AppendLine($"Key: ---- {g.Key} ----");

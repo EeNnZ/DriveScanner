@@ -9,7 +9,7 @@ namespace ConsoleScanner
 {
     internal class Program
     {
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
             var parser = new Parser(x =>
             {
@@ -20,16 +20,18 @@ namespace ConsoleScanner
             });
             var options = parser.ParseArguments<Options>(args).Value;
 
-            var scanner = new Scanner(options, p =>
-            {
-                //TODO: Handle progress here
-            });
+            var scanner = new Scanner(options);
             Console.WriteLine("Processing...");
-            await scanner.ScanAsync();
-            await scanner.Report();
+            var timer = new Timer((s) =>
+            {
+                Console.WriteLine($"Scanned entries: {scanner.EntryCount}");
+            }, null, 0, 500);
+            Task.Run(() => scanner.Scan())
+                .ContinueWith(t => scanner.Report()).Wait();
+            timer.Dispose();
 
-            Console.WriteLine($"\r\nDone in {scanner.Watch.ElapsedMilliseconds} ms\r\nExit in 5 seconds...");
-            Thread.Sleep(5000);
+            Console.WriteLine($"\r\nDone in {scanner.Watch.ElapsedMilliseconds} ms\r\nPress any to exit...");
+            Console.ReadLine();
         }
 
     }
