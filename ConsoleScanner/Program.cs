@@ -15,11 +15,20 @@ namespace ConsoleScanner
             {
                 x.AutoHelp = true;
                 x.AutoVersion = false;
-                x.EnableDashDash = true;
+                x.CaseSensitive = false;
                 x.IgnoreUnknownArguments = true;
+                x.HelpWriter = Console.Error;
+                x.EnableDashDash = true;
             });
-            var options = parser.ParseArguments<Options>(args).Value;
-
+            var options = parser.ParseArguments<Options>(args)
+                .WithParsed(op =>
+                {
+                    Go(op);
+                });
+            Console.ReadLine();
+        }
+        static void Go(Options options)
+        {
             var scanner = new Scanner(options);
             Console.WriteLine("Processing...");
             var timer = new Timer((s) =>
@@ -29,9 +38,7 @@ namespace ConsoleScanner
             Task.Run(() => scanner.Scan())
                 .ContinueWith(t => scanner.Report()).Wait();
             timer.Dispose();
-
             Console.WriteLine($"\r\nDone in {scanner.Watch.ElapsedMilliseconds} ms\r\nPress any to exit...");
-            Console.ReadLine();
         }
 
     }

@@ -9,7 +9,7 @@ namespace ConsoleScanner
         public string Root { get; set; }
         [Option('p', "path", HelpText = "Path to write report", Default = "D:\\", Required = false)]
         public string Path { get; set; }
-        [Option('o', "open", HelpText = "Open report on complete or not", Default = true)]
+        [Option('o', "open", HelpText = "Open report on complete or not", Default = true, Required = false)]
         public bool Open { get; set; }
     }
 }
