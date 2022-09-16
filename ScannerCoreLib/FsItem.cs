@@ -8,59 +8,69 @@ namespace ScannerCoreLib
 {
     public class FsItem
     {
-        public string Name { get; set; }
-        public bool IsDir { get; set; }
-        public DateTime LastModified { get; set; }
-        private long _byteSize;
-        public long ByteSize => _byteSize;
-        public decimal Size
+        public string Name { get; }
+        public bool IsDir { get; }
+        public DateTime LastModified { get;}
+        public DateTime Created { get;}
+        public long ByteSize { get; }
+        public FsItem(string entryName)
         {
-            get
-            {
-                var dec = Convert.ToDecimal(_byteSize);
-                var mb = Math.Round((dec / 1000000), 2);
-                return mb;
-            }
-        }
-        public FsItem(string root)
-        {
-            Name = root;
-            IsDir = Directory.Exists(root);
-            if (IsDir) { _byteSize = CalculateDirectorySize(root); }
-            else { _byteSize = CalculateFileSize(root); }
-            LastModified = Directory.GetLastWriteTime(root);
+            Name = entryName;
+            IsDir = Directory.Exists(entryName);
+            if (IsDir) { ByteSize = GetDirSize(entryName); }
+            else { ByteSize = GetFileSize(entryName); }
+            LastModified = GetLastAccessedDate(entryName);
+            Created = GetCreatedDate(entryName);
         }
 
-        private long CalculateFileSize(string root)
+        private DateTime GetCreatedDate(string entryName)
         {
-            var fileInfo = new FileInfo(root);
-            return fileInfo.Length;
+            if(IsDir) { return Directory.GetCreationTime(entryName); }
+            else { return File.GetCreationTime(entryName); }
         }
-        private long CalculateDirectorySize(string root)
+
+        private DateTime GetLastAccessedDate(string entryName)
         {
-            long size = 0;
+            if(IsDir) { return Directory.GetLastAccessTime(entryName); }
+            return File.GetLastWriteTime(entryName);
+        }
+        private long GetFileSize(string entryName)
+        {
+            try { return SizeHelper.GetFileSizeEx(entryName); }
+            catch (Exception) { return 0; }
+        }
+        
+        private long GetDirSize(string entryName)
+        {
             try
             {
-                string[] fileEntries = Directory.GetFiles(root);
-                foreach (string entry in fileEntries)
-                {
-                    Interlocked.Add(ref size, (new FileInfo(entry)).Length);
-                }
-                string[] subdirEntries = Directory.GetDirectories(root);
-                Parallel.For<long>(0, subdirEntries.Length, () => 0, (i, loop, subtotal) =>
-                {
-                    if ((File.GetAttributes(subdirEntries[i]) & FileAttributes.ReparsePoint) != FileAttributes.ReparsePoint)
-                    {
-                        subtotal += CalculateDirectorySize(subdirEntries[i]);
-                        return subtotal;
-                    }
-                    return 0;
-                },
-                    (x) => Interlocked.Add(ref size, x)
-                );
-                return size;
+                return SizeHelper.GetWSHFolderSize(entryName);
             }
             catch (Exception) { return 0; }
+        }
+
+        [Obsolete]
+        private long DirSizeManagedAPI(string entryName, ref long size)
+        {
+            throw new NotImplementedException();
+            //string[] fileEntries = Directory.GetFiles(entryName);
+            //foreach (string entry in fileEntries)
+            //{
+            //    Interlocked.Add(ref size, (new FileInfo(entry)).Length);
+            //}
+            //string[] subdirEntries = Directory.GetDirectories(entryName);
+            //Parallel.For<long>(0, subdirEntries.Length, () => 0, (i, loop, subtotal) =>
+            //{
+            //    if ((File.GetAttributes(subdirEntries[i]) & FileAttributes.ReparsePoint) != FileAttributes.ReparsePoint)
+            //    {
+            //        subtotal += GetDirSize(subdirEntries[i]);
+            //        return subtotal;
+            //    }
+            //    return 0;
+            //},
+            //    (x) => Interlocked.Add(ref size, x)
+            //);
+            //return size;
         }
     }
 }

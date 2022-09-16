@@ -4,6 +4,9 @@ using CommandLine;
 using ShellProgressBar;
 using ScannerCoreLib;
 using System.Threading;
+using System.Diagnostics;
+using System.Linq;
+using System.IO;
 
 namespace ConsoleScanner
 {
@@ -20,25 +23,34 @@ namespace ConsoleScanner
                 x.HelpWriter = Console.Error;
                 x.EnableDashDash = true;
             });
-            var options = parser.ParseArguments<Options>(args)
-                .WithParsed(op =>
-                {
-                    Go(op);
-                });
-            Console.ReadLine();
-        }
-        static void Go(Options options)
-        {
+            var options = parser.ParseArguments<Options>(args).Value;
+
             var scanner = new Scanner(options);
             Console.WriteLine("Processing...");
-            var timer = new Timer((s) =>
+
+            var task = new Task(() => scanner.Scan());
+            var stopwatch = Stopwatch.StartNew();
+            task.Start();
+
+            while (!task.IsCompleted)
             {
-                Console.WriteLine($"Scanned entries: {scanner.EntryCount}");
-            }, null, 0, 500);
-            Task.Run(() => scanner.Scan())
-                .ContinueWith(t => scanner.Report()).Wait();
-            timer.Dispose();
-            Console.WriteLine($"\r\nDone in {scanner.Watch.ElapsedMilliseconds} ms\r\nPress any to exit...");
+                Console.Write('.');
+                Thread.Sleep(100);
+            }
+            Console.WriteLine("Done");
+            stopwatch.Stop();
+
+            var r = new Reporter(scanner, options.ResLinesCount, stopwatch.Elapsed.Seconds);
+            r.Report();
+
+            if (options.OpenFileOnComplete) LaunchFile(r.ResPath);
+
+            Console.WriteLine("Press any to exit...");
+            Console.ReadKey();
+        }
+        static void LaunchFile(string url)
+        {
+            Process.Start("notepad.exe", url);
         }
 
     }

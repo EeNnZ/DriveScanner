@@ -2,8 +2,9 @@
 {
     public interface IOptions
     {
-        string Root { get; set; }
-        string Path { get; set; }
-        bool Open { get; set; }
+        string DriveToScan { get; set; }
+        string ResultFileDestinationFolder { get; set; }
+        bool OpenFileOnComplete { get; set; }
+        int ResLinesCount { get; set; }
     }
 }
