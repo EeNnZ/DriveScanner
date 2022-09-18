@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace ScannerCoreLib
+namespace Scanner.Parts
 {
     public class FsItem
     {
@@ -17,22 +17,19 @@ namespace ScannerCoreLib
         {
             Name = entryName;
             IsDir = Directory.Exists(entryName);
-            if (IsDir) { ByteSize = GetDirSize(entryName); }
-            else { ByteSize = GetFileSize(entryName); }
+            ByteSize = IsDir ? GetDirSize(entryName) : GetFileSize(entryName);
             LastModified = GetLastAccessedDate(entryName);
             Created = GetCreatedDate(entryName);
         }
 
         private DateTime GetCreatedDate(string entryName)
         {
-            if(IsDir) { return Directory.GetCreationTime(entryName); }
-            else { return File.GetCreationTime(entryName); }
+            return IsDir ? Directory.GetCreationTime(entryName) : File.GetCreationTime(entryName);
         }
 
         private DateTime GetLastAccessedDate(string entryName)
         {
-            if(IsDir) { return Directory.GetLastAccessTime(entryName); }
-            return File.GetLastWriteTime(entryName);
+            return IsDir ? Directory.GetLastAccessTime(entryName) : File.GetLastWriteTime(entryName);
         }
         private long GetFileSize(string entryName)
         {
@@ -42,10 +39,7 @@ namespace ScannerCoreLib
         
         private long GetDirSize(string entryName)
         {
-            try
-            {
-                return SizeHelper.GetWSHFolderSize(entryName);
-            }
+            try { return SizeHelper.GetWSHFolderSize(entryName); }
             catch (Exception) { return 0; }
         }
 

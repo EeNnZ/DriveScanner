@@ -4,11 +4,13 @@ using System.Collections.Specialized;
 using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
+using System.Threading;
 
-namespace ScannerCoreLib
+namespace Scanner.Parts
 {
-    public class Scanner
+    public class DriveScanner
     {
+        private IProgress<float> _progress;
         public SortedSet<FsItem> FlattenResult { get; private set; } = new SortedSet<FsItem>(new FsItemComparer());
         public StringCollection Fails { get; } = new StringCollection();
         public DriveInfo CurrentDrive { get; private set; }
@@ -16,31 +18,46 @@ namespace ScannerCoreLib
         public long Total { get; private set; }
         public long Occupied { get; private set; }
         public string CurrentEntry { get; private set; }
+        public long TraversedBytes { get; private set; } = 0;
+
+
         //public double Progress => Occupied == 0 ? 0 : Total * (double) 100/Occupied;
 
         //TODO: Implement Tree result to use with WPF TreeView
 
 
-        public Scanner(IOptions options)
+        public DriveScanner(IOptions options)
         {
             CurrentDrive = new DriveInfo(options.DriveToScan);
             Free = CurrentDrive.TotalFreeSpace;
             Total = CurrentDrive.TotalSize;
             Occupied = Total - Free;
         }
+        public DriveScanner(IOptions options, IProgress<float> progress)
+            :this(options)
+        {
+            _progress = progress;
+        }
         public void Scan()
         {
             try
             {
-                Traverse(CurrentDrive.Name, (entryName) => {
-                        try 
+                Traverse(CurrentDrive.Name, (entryName) =>
+                {
+                    try
                     {
                         CurrentEntry = entryName;
-                        FlattenResult.Add(new FsItem(entryName)); 
+                        FsItem item = new FsItem(entryName);
+                        FlattenResult.Add(item);
+                        TraversedBytes += item.ByteSize;
+                        _progress.Report(TraversedBytes / (float)Occupied * 100);
+#if DEBUG
+                        Thread.Sleep(200);
+#endif
                     }
-                        catch (IndexOutOfRangeException e) { LogFail($"Message: {e.Message} -> StackTrace: {e.StackTrace}"); throw; }
-                        catch (Exception e) { LogFail(e.Message); }
-                    });
+                    catch (IndexOutOfRangeException e) { LogFail($"Message: {e.Message} -> StackTrace: {e.StackTrace}"); throw; }
+                    catch (Exception e) { LogFail(e.Message); }
+                });
             }
             catch (ArgumentException e) { LogFail(e.Message); throw; }
         }

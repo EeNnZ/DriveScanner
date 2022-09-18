@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Threading.Tasks;
 using CommandLine;
-using ShellProgressBar;
-using ScannerCoreLib;
 using System.Threading;
 using System.Diagnostics;
-using System.Linq;
-using System.IO;
-
+using Scanner;
+using Scanner.Parts;
 namespace ConsoleScanner
 {
     internal class Program
@@ -24,8 +21,8 @@ namespace ConsoleScanner
                 x.EnableDashDash = true;
             });
             var options = parser.ParseArguments<Options>(args).Value;
-
-            var scanner = new Scanner(options);
+            if(options == null) { Environment.Exit(-1); }
+            var scanner = new DriveScanner(options);
             Console.WriteLine("Processing...");
 
             var task = new Task(() => scanner.Scan());
@@ -40,18 +37,18 @@ namespace ConsoleScanner
             Console.WriteLine("Done");
             stopwatch.Stop();
 
-            var r = new Reporter(scanner, options.ResLinesCount, stopwatch.Elapsed.Seconds);
-            r.Report();
+            var r = new Reporter(scanner, options.ResLinesCount, stopwatch.Elapsed.Seconds, options.FindDuplicates);
+            string report = r.Report().ToString();
 
-            if (options.OpenFileOnComplete) LaunchFile(r.ResPath);
+            if (options.OpenFileOnComplete) Notepad.SendText(report);
 
             Console.WriteLine("Press any to exit...");
             Console.ReadKey();
         }
-        static void LaunchFile(string url)
-        {
-            Process.Start("notepad.exe", url);
-        }
+        //static void LaunchFile(string url)
+        //{
+        //    Process.Start("notepad.exe", url);
+        //}
 
     }
 }

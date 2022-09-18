@@ -1,0 +1,61 @@
+﻿<Window x:Class="ScannerGui.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:ScannerGui"
+        xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+        d:DataContext="{d:DesignInstance Type=local:MainViewModel}"
+    mc:Ignorable="d"
+        Title="{StaticResource AppName}" Height="450" Width="800">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="0.25*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="0.05*" />
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <StackPanel.Background>
+                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                    <GradientStop Color="#FFD4D4D4" Offset="1"/>
+                    <GradientStop Color="#FFEDEDED" Offset="0"/>
+                </LinearGradientBrush>
+            </StackPanel.Background>
+            <GroupBox Header="Options" Margin="10" Padding="10" BorderBrush="Black">
+                <StackPanel>
+                    <TextBlock>Drive:</TextBlock>
+                    <ComboBox x:Name="drivesListBox" ItemsSource="{Binding Drives}" SelectedItem="{Binding Drive, Mode=OneWayToSource}"/>
+                    <TextBlock>Result destination:</TextBlock>
+                    <TextBox x:Name="destinationTextBox" Text="{Binding ResultDestination, Mode=TwoWay}"/>
+                    <TextBlock>Result lines count:</TextBlock>
+                    <xctk:IntegerUpDown x:Name="linesCountTextBox" Value="{Binding LinesCount}" TextAlignment="Left"/>
+                    <CheckBox x:Name="openOnComplete" 
+                              IsChecked="{Binding OpenOnComplete, Mode=OneWayToSource}"
+                              Content="Open"
+                              Margin="0,10,0,0"/>
+                    <CheckBox x:Name="findDuplicates" 
+                              IsChecked="{Binding SearchDuplicates, Mode=OneWayToSource}"
+                              Content="Find duplicates"
+                              Margin="0,5,0,0"/>
+                    <Button Margin="0,20,0,0" Command="{Binding ScanCommand}">Scan</Button>
+                </StackPanel>
+            </GroupBox>
+        </StackPanel>
+        <TextBlock x:Name="textResult"
+                   Grid.Column="1"
+                   Text="{Binding TextResult}"/>
+        <TextBlock x:Name="textStatus"
+                   Grid.Row="1"
+                   Grid.Column="1"
+                   Margin="10,0,0,0"
+                   Text="{Binding TextStatus}"/>
+        <ProgressBar x:Name="progressBad"
+                     Value="{Binding ProgressValue}"
+                     Minimum="0"
+                     Maximum="100"
+                     Grid.Row="1"/>
+    </Grid>
+</Window>

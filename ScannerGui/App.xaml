@@ -1,0 +1,10 @@
+﻿<Application x:Class="ScannerGui.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:ScannerGui" 
+             xmlns:sys="clr-namespace:System;assembly=mscorlib"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <sys:String x:Key="AppName">Scanner Gui</sys:String>
+    </Application.Resources>
+</Application>

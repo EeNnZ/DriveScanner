@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using System.Runtime.Versioning;
 using System.IO;
 
-namespace ScannerCoreLib
+namespace Scanner.Parts
 {
     public static class SizeHelper
     {
