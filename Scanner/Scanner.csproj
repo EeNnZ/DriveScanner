@@ -7,8 +7,8 @@
     <ProjectGuid>{D03793B7-2E78-4056-B0D0-6D25D5FD3D02}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ScannerCoreLib</RootNamespace>
-    <AssemblyName>ScannerCoreLib</AssemblyName>
+    <RootNamespace>Scanner</RootNamespace>
+    <AssemblyName>Scanner</AssemblyName>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -60,7 +60,7 @@
     <Compile Include="IOptions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Parts\Reporter.cs" />
-    <Compile Include="Scanner.cs" />
+    <Compile Include="DriveScanner.cs" />
     <Compile Include="Parts\SizeHelper.cs" />
   </ItemGroup>
   <ItemGroup>

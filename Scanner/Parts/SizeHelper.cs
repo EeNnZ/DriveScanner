@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.Versioning;
 using System.IO;
+using System.Security;
 
 namespace Scanner.Parts
 {
@@ -54,9 +55,17 @@ namespace Scanner.Parts
         public static long GetWSHFolderSize(string root)
         {
             var fso = new IWshRuntimeLibrary.FileSystemObject();
-            long dirSize = (long)fso.GetFolder(root).Size;
-            Marshal.FinalReleaseComObject(fso);
-            return dirSize;
+            try
+            {
+                long dirSize = (long)fso.GetFolder(root).Size;
+                int released = Marshal.FinalReleaseComObject(fso);
+                return dirSize;
+            }
+            catch (SecurityException)
+            {
+                int released = Marshal.FinalReleaseComObject(fso);
+                return 0;
+            }
         }
     }
 }

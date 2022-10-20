@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Scanner.Parts;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel.Design;
@@ -6,7 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 
-namespace Scanner.Parts
+namespace Scanner
 {
     public class DriveScanner
     {
@@ -50,10 +51,10 @@ namespace Scanner.Parts
                         FsItem item = new FsItem(entryName);
                         FlattenResult.Add(item);
                         TraversedBytes += item.ByteSize;
-                        _progress.Report(TraversedBytes / (float)Occupied * 100);
-#if DEBUG
-                        Thread.Sleep(200);
-#endif
+                        _progress?.Report(TraversedBytes / (float)Occupied * 100);
+//#if DEBUG
+//                        Thread.Sleep(200);
+//#endif
                     }
                     catch (IndexOutOfRangeException e) { LogFail($"Message: {e.Message} -> StackTrace: {e.StackTrace}"); throw; }
                     catch (Exception e) { LogFail(e.Message); }
