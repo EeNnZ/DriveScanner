@@ -25,7 +25,7 @@ namespace ConsoleScanner
 #if DEBUG
             var options = new Options
             {
-                DriveToScan = "D",
+                DriveToScan = "C",
                 ResLinesCount = 300,
                 FindDuplicates = false,
                 OpenFileOnComplete = true,
@@ -52,7 +52,7 @@ namespace ConsoleScanner
                         Thread.Sleep(100);
                     }
                     Console.Clear();
-                    Console.WriteLine("Processing...");
+                    Console.WriteLine($"Processing drive: {scanner.CurrentDrive.Name} ...");
                 }
             }
             catch (Exception)

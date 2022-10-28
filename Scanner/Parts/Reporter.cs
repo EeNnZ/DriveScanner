@@ -17,7 +17,17 @@ namespace Scanner.Parts
         private readonly int _resLinesCount, _seconds;
         private readonly bool _findDuplicates;
         public string ResPath { get; }
-        public string ResultFilename => $"{_scanner.CurrentDrive}_scan_{DateTime.Now:MMM_dd_HH_mm}.txt";
+        public string ResultFilename
+        {
+            get
+            {
+                DriveInfo[] driveInfos = DriveInfo.GetDrives();
+                char sysDriveLetter = Path.GetPathRoot(Environment.SystemDirectory)[0];
+                char curDriveLetter = _scanner.CurrentDrive.Name[0];
+                string res = $"{driveInfos.First(d => d.Name[0] != sysDriveLetter).Name}_scan_{DateTime.Now:MMM_dd_HH_mm}.txt";
+                return res;
+            }
+        }
 
         public Reporter(DriveScanner scanner, int resLinesCount, int seconds, bool findDuplicates=false)
         {
